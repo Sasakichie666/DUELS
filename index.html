@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡牌对战 - 联机大厅 & 卡组管理器</title>
+    <!-- PeerJS 联机库：优先本地文件 js/lib/peerjs.min.js（避免 CDN 被墙/变慢） -->
+    <script src="js/lib/peerjs.min.js"></script>
+    <script>
+        // 兜底：本地库没加载成功（文件缺失 / 被安全软件拦截 / 复制项目时漏了 js/lib 目录）时自动改用 CDN；
+        // 两者都失败时，点击"创建/加入房间"会给出明确提示（js/network.js 里的 peerLibMissing）。
+        if (typeof Peer === 'undefined') {
+            var _pj = document.createElement('script');
+            _pj.src = 'https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js';
+            _pj.onload = function () {
+                console.log('[联机] 本地联机库未找到，已自动回退到 CDN 加载 PeerJS');
+            };
+            _pj.onerror = function () {
+                window.__peerjsLoadFailed = true;
+                console.error('[联机] PeerJS 加载失败：本地 js/lib/peerjs.min.js 不存在，且 CDN(unpkg.com) 不可达');
+            };
+            document.head.appendChild(_pj);
+        }
+    </script>
+    <!-- 样式 -->
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/deck.css">
+    <link rel="stylesheet" href="css/card.css">
+    <link rel="stylesheet" href="css/battle.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/counter.css">
+    <link rel="stylesheet" href="css/health.css">
+    <link rel="stylesheet" href="css/card-layout.css">
+    <link rel="stylesheet" href="css/viewer.css">
+    <link rel="stylesheet" href="css/mulligan.css">
+    <link rel="stylesheet" href="css/chain.css">
+    <link rel="stylesheet" href="css/diag.css">
+    <link rel="stylesheet" href="css/costPanel.css">
+    <!-- 卡牌来源特效框：转移控制权 / 复制出来的卡（见 js/core/controlManager.js） -->
+    <link rel="stylesheet" href="css/card-origin.css">
+    <!-- 词条 / 自定义文本 编辑面板（见 js/ui/traitPanelUI.js） -->
+    <link rel="stylesheet" href="css/trait-panel.css">
+    <!-- 展示 / 翻阅 / 手牌展示 面板（见 js/core/revealChannel.js） -->
+    <link rel="stylesheet" href="css/reveal.css">
+    <!-- ★阶段T1：全站 UI 统一（只做覆盖；放在最后 ✓ —— 想回退删掉这一行即可 ✓） -->
+    <link rel="stylesheet" href="css/match.css">
+    <link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 -->
+        <div class="top-nav">
+            <div class="logo">⚔️ 卡牌<span>对战</span></div>
+            <!-- 回合数：★阶段T1 起由 JS 在【开局后】才写入内容（开局前为空 → CSS 里隐藏 ✓）
+                 老问题：这里写死过"第1回合"，没开局就显示出来了 ✗ -->
+            <div class="nav-turn-count" id="navTurnCountDisplay"></div>
+            <div class="nav-buttons">
+                <button class="btn active" id="btnLobby">🎮 联机大厅</button>
+                <button class="btn" id="btnDecks">📚 我的卡组</button>
+                <button class="btn" id="btnDeck">📋 卡组管理器</button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <!-- 联机大厅视图 -->
+            <div class="view active" id="view-lobby">
+                <div class="lobby-hero">
+                    <div class="lobby-step">01 / 开始对局</div>
+                    <h1 class="lobby-title">对局大厅</h1>
+
+                    <!-- 对局方式（赛制 × 局数，9 种组合由 JS 生成 ✓ 单一数据源 ✓） -->
+                    <div class="lobby-field">
+                        <label class="lobby-label" for="modePick">对局方式</label>
+                        <div class="select-wrap">
+                            <select id="modePick" class="lobby-select"></select>
+                            <span class="select-caret">▾</span>
+                        </div>
+                        <div class="lobby-hint" id="modeHint">构筑赛 = 用自己保存的卡组对局 ✓</div>
+                    </div>
+
+                    <!-- ★两个入口按钮仍然【并列排】✓（按参考图的风格：主按钮金色） -->
+                    <div class="lobby-actions">
+                        <button class="action-tile action-create" id="btnCreateRoom" type="button">
+                            <span class="at-title">创建房间</span>
+                            <span class="at-arrow">→</span>
+                        </button>
+                        <button class="action-tile action-join" id="btnJoinRoom" type="button">
+                            <span class="at-title">加入房间</span>
+                            <span class="at-sub">输入房间号</span>
+                        </button>
+                    </div>
+
+                    <!-- 分区标题行（参考图"可用房间 / 刷新"那一行的位置 ✓） -->
+                    <div class="lobby-row-title">
+                        <span>连接状态</span>
+                        <button class="btn btn-ghost" id="btnDiag" type="button">连接自检</button>
+                    </div>
+
+                    <!-- 空态提示卡（参考图的 ◇ 空态样式 ✓；内容如实：本作没有公开房间列表 ✓） -->
+                    <div class="lobby-empty">
+                        <div class="le-icon">◇</div>
+                        <div class="le-main">本作不设公开房间列表</div>
+                        <div class="le-sub">创建房间后，把房间号发给对手即可加入</div>
+                    </div>
+
+                    <!-- 本次连接实际走的哪条路（诊断用；由 Network 的 connection_path 事件驱动） -->
+                    <div class="conn-path" id="connPath" style="display:none;"></div>
+
+                    <!-- 隐私声明：本站不收集任何个人信息 ✓（详见 privacy.html，外审/用户都可自查 ✓） -->
+                    <p style="text-align:center;margin:4px 0 0;font-size:0.78rem;">
+                        <a href="privacy.html" target="_blank" rel="noopener"
+                           style="color:var(--text-secondary);text-decoration:none;">隐私声明 / Privacy Statement</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- ================= VS 准备场景（独立视图：建房成功 / 加入成功后进入 ✓） ================= -->
+            <div class="view" id="view-vs">
+                <div class="vs-scene">
+                    <!-- 顶部：序号标题 + 返回大厅 -->
+                    <div class="vs-top">
+                        <div class="vs-step">02 / 准备对局</div>
+                        <button class="btn btn-ghost vs-leave" id="btnLeaveRoom" type="button">← 返回大厅</button>
+                    </div>
+                    <h1 class="vs-title">对战准备</h1>
+
+                    <!-- 房间号（大号 + 复制 ✓） -->
+                    <div class="vs-room" id="roomCodeContainer" style="display:none;">
+                        <span class="vs-room-label">房间号</span>
+                        <span class="room-code-small" id="roomCodeDisplay">----</span>
+                        <button class="btn btn-ghost btn-mini" id="btnCopyRoom" type="button">复制</button>
+                    </div>
+
+                    <!-- 房间 / 连接状态（沿用原有 id ✓ → ui.js 的 updateConnectionUI 继续有效 ✓） -->
+                    <div class="vs-status">
+                        <div class="connection-status">
+                            <div class="dot disconnected" id="hostStatusDot"></div>
+                            <span id="hostStatusText">未创建房间</span>
+                        </div>
+                        <div class="connection-status">
+                            <div class="dot disconnected" id="joinStatusDot"></div>
+                            <span id="joinStatusText">未加入房间</span>
+                        </div>
+                    </div>
+
+                    <!-- 赛制 / 局数（创建房间时选择 ✓；房主的选择会同步给对手 ✓） -->
+                    <div class="match-config">
+                        <span class="mc-item">赛制：<b id="mcMode">构筑赛</b></span>
+                        <span class="mc-item">局数：<b id="mcBest">BO1</b></span>
+                        <span class="mc-hint" id="mcHint">构筑赛 = 用自己保存的卡组对局 ✓</span>
+                    </div>
+                    <!-- ★出战卡组：联机开局用哪一套（双方各看自己的 ✓；不合法就禁止准备 ✓） -->
+                    <div class="vs-deck" id="vsDeckBar">
+                        <span class="vs-deck-label">🎴 出战卡组</span>
+                        <select class="vs-deck-select" id="vsDeckSelect" title="切换出战卡组（开局用它的三个卡组槽位）"></select>
+                        <button class="btn btn-ghost btn-mini" id="btnVsEditDeck" type="button" title="去卡组管理器编辑这一套">✏️ 编辑</button>
+                        <button class="btn btn-ghost btn-mini" id="btnVsDeckCode" type="button" title="查看 / 复制卡组码">🔗 卡组码</button>
+                        <span class="vs-deck-status" id="vsDeckStatus"></span>
+                    </div>
+
+                    <!-- 双方准备（沿用原有结构与 id ✓ → 准备/开始按钮逻辑不变 ✓） -->
+                    <div class="battle-waiting active" id="battleWaiting">
+                        <div class="player-cards">
+                            <div class="player-card">
+                                <div class="p-name">🎮 你</div>
+                                <div class="p-status" id="myReadyStatus">未准备</div>
+                                <button class="btn btn-success" id="btnReady" style="margin-top:8px;">
+                                    ✅ 准备
+                                </button>
+                            </div>
+                            <div class="vs-icon-inline">VS</div>
+                            <div class="player-card">
+                                <div class="p-name">👤 对手</div>
+                                <div class="p-status" id="opponentReadyStatus">未准备</div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:8px;">等待对手准备</div>
+                            </div>
+                        </div>
+                        <div class="opponent-info" id="hostOpponentInfo" style="display:none;">
+                            <div class="avatar">👤</div>
+                            <div>
+                                <div style="font-weight:600;">对手已加入</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);" id="hostOpponentStatus">等待准备...</div>
+                            </div>
+                        </div>
+                        <div class="opponent-info" id="joinOpponentInfo" style="display:none;">
+                            <div class="avatar">👤</div>
+                            <div>
+                                <div style="font-weight:600;">已连接到房主</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);" id="joinOpponentStatus">等待准备...</div>
+                            </div>
+                        </div>
+                        <button class="btn" id="btnStartGame" disabled style="font-size:1.2rem; padding:16px 40px;">
+                            🎯 开始对战
+                        </button>
+                        <p id="startGameHint" style="color:var(--text-secondary); font-size:0.85rem;">双方准备后即可开始对战</p>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- ================= 我的卡组（卡组库：多套卡组一览 + 新建 / 改名 / 出战 / 编辑入口） =================
+                 分层：牌组「库」与牌组「编辑」分开 —— 卡片下方的「✏️ 编辑」才进卡组管理器 ✓ -->
+            <div class="view" id="view-decks">
+                <div class="decks-scene">
+                    <div class="vs-top">
+                        <div class="vs-step">03 / 我的卡组</div>
+                        <button class="btn btn-ghost vs-leave" id="btnDecksBack" type="button">← 返回大厅</button>
+                    </div>
+                    <h1 class="vs-title">我的卡组</h1>
+
+                    <div class="decks-toolbar">
+                        <button class="btn btn-success" id="btnNewDeck" type="button">＋ 新建卡组</button>
+                        <button class="btn" id="btnPasteDeckCode" type="button" title="粘贴卡组码 → 新建一份独立卡组">📥 粘贴卡组码</button>
+                        <span class="decks-hint" id="decksHint">「✏️ 编辑」进卡组管理器改牌；「📌 出战」决定开局用哪一套 ✓</span>
+                    </div>
+
+                    <div class="decks-grid" id="decksGrid"></div>
+                </div>
+            </div>
+
+            <div class="view" id="view-deck">
+                <div class="deck-manager-container">
+                <div class="deck-manager-bar">
+                    <span class="dmb-label">🎴 正在编辑</span>
+                    <select class="dmb-select" id="deckPicker" title="挑选要编辑的卡组"></select>
+                    <button class="btn btn-ghost btn-mini" id="btnRenameDeck" type="button" title="重命名这份卡组">✏️ 改名</button>
+                    <button class="btn btn-ghost btn-mini" id="btnDuplicateDeck" type="button" title="复制一份（独立卡组）">⧉ 复制</button>
+                    <button class="btn btn-ghost btn-mini" id="btnDeleteDeck" type="button" title="删除这份卡组">🗑️ 删除</button>
+                    <button class="btn btn-ghost btn-mini" id="btnSetActiveDeck" type="button" title="开局用这一套">📌 设为出战</button>
+                    <span class="dmb-spacer"></span>
+                    <button class="btn btn-ghost btn-mini" id="btnBackFromDeck" type="button" hidden>← 返回</button>
+                    <button class="btn btn-ghost btn-mini" id="btnGenDeckCode" type="button" title="把当前编辑的卡组导出成卡组码">🔗 生成卡组码</button>
+                    <button class="btn btn-ghost btn-mini" id="btnManageDecks" type="button" title="回到「我的卡组」总览">📚 我的卡组</button>
+                </div>
+                    <div class="card-library">
+                        <!-- 卡牌库筛选：卡包 + 费用颜色限定（需求2/3） -->
+                        <div class="library-filters" id="libraryFilters"></div>
+                        <div id="cardLibrary"></div>
+                    </div>
+                    <div class="deck-editor">
+                        <h3>
+                            🎴 <span id="editingDeckName">我的卡组</span>
+                            <span class="deck-count" id="mainDeckCount">读取中…</span>
+                        </h3>
+                        <!-- 从 VS 准备界面点「✏️ 编辑」进来时显示，可一键回去 ✓ -->
+                        <div class="deck-slots">
+                            <div class="slot-section">
+                                <h4 id="mainDeckRule">⚔️ 主卡组</h4>
+                                <div class="slot-cards" id="mainDeckSlots"></div>
+                            </div>
+                            <div class="slot-section">
+                                <h4 id="costDeckRule">💎 费用卡组</h4>
+                                <div class="slot-cards" id="costDeckSlots"></div>
+                            </div>
+                            <!-- 新增传说卡组槽位 -->
+                            <div class="slot-section">
+                                <h4 id="legendDeckRule">📜 传说卡组</h4>
+                                <div class="slot-cards" id="legendDeckSlots"></div>
+                            </div>
+                        </div>
+                        <div class="deck-actions">
+                            <button class="btn btn-success" id="btnSaveDeck">💾 保存卡组</button>
+                            <button class="btn" id="btnLoadDeck" title="丢弃未保存的改动，重新载入这一套">↩️ 放弃改动</button>
+                            <button class="btn btn-gold" id="btnSetActiveDeck" title="开局用这一套">📌 设为出战</button>
+                            <button class="btn btn-danger" id="btnClearDeck">🗑️ 清空卡组</button>
+                        </div>
+                        <div id="deckValidationMsg" style="font-size:0.8rem; color:var(--text-secondary); text-align:center;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 战斗视图：开局前连节点都不存在；内容存于下方模板，开局时由 js/ui.js 克隆进来 -->
+            <div class="view" id="view-battle"></div>
+
+            <!-- ================= 弹窗 ①：创建房间（赛制 + 局数） ================= -->
+            <div class="modal-mask" id="createRoomModal" hidden>
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createRoomTitle">
+                    <header class="modal-head">
+                        <h3 id="createRoomTitle">🏠 创建房间</h3>
+                        <button class="modal-close" id="btnCreateRoomClose" type="button" aria-label="关闭">✕</button>
+                    </header>
+                    <p class="modal-hint">选好赛制与局数后创建房间，再把房间号发给对手即可。</p>
+
+                    <div class="modal-sec">
+                        <div class="modal-sec-title">赛制</div>
+                        <div class="opt-row" id="modeRow">
+                            <button class="opt is-active" data-mode="constructed" type="button">
+                                <b>构筑赛</b><span>用自己保存的卡组（= 现在的玩法 ✓）</span>
+                            </button>
+                            <button class="opt" data-mode="sealed" type="button">
+                                <b>现开赛</b><span>开包组卡（界面先就位，功能待做）</span>
+                            </button>
+                            <button class="opt" data-mode="draft" type="button">
+                                <b>轮抽赛</b><span>轮流选牌（界面先就位，功能待做）</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="modal-sec">
+                        <div class="modal-sec-title">局数</div>
+                        <div class="opt-row opt-row-3" id="bestRow">
+                            <button class="opt is-active" data-best="1" type="button"><b>BO1</b><span>一局定胜负</span></button>
+                            <button class="opt" data-best="3" type="button"><b>BO3</b><span>三局两胜</span></button>
+                            <button class="opt" data-best="5" type="button"><b>BO5</b><span>五局三胜</span></button>
+                        </div>
+                    </div>
+
+                    <footer class="modal-foot">
+                        <button class="btn" id="btnCreateCancel" type="button">取消</button>
+                        <button class="btn btn-success" id="btnCreateConfirm" type="button">🚀 创建房间</button>
+                    </footer>
+                </div>
+            </div>
+
+            <!-- ================= 弹窗 ②：加入房间（输入房间号） ================= -->
+            <div class="modal-mask" id="joinRoomModal" hidden>
+                <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="joinRoomTitle">
+                    <header class="modal-head">
+                        <h3 id="joinRoomTitle">🚪 加入房间</h3>
+                        <button class="modal-close" id="btnJoinRoomClose" type="button" aria-label="关闭">✕</button>
+                    </header>
+                    <p class="modal-hint">输入房主分享的房间号（4 位数字；若房主显示的是带后缀的完整 ID，请原样粘贴）。</p>
+                    <div class="password-input-group">
+                        <input type="text" id="joinPasswordInput" maxlength="24"
+                               placeholder="输入房间号（或完整房间ID）" autocomplete="off" spellcheck="false"
+                               oninput="this.value=this.value.replace(/[^0-9a-zA-Z-]/g,'')" />
+                    </div>
+                    <footer class="modal-foot">
+                        <button class="btn" id="btnJoinCancel" type="button">取消</button>
+                        <button class="btn btn-success" id="btnJoinConfirm" type="button">加入</button>
+                    </footer>
+                </div>
+            </div>
+
+
+            <!-- ================= 弹窗 ③：卡组码（生成 / 复制） ================= -->
+            <div class="modal-mask" id="deckCodeModal" hidden>
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deckCodeTitle">
+                    <header class="modal-head">
+                        <h3 id="deckCodeTitle">🔗 卡组码</h3>
+                        <button class="modal-close" id="btnDeckCodeClose" type="button" aria-label="关闭">✕</button>
+                    </header>
+                    <p class="modal-hint" id="deckCodeHint">每张卡用它的 6 位编号表示；三行分别是主卡组 / 费用卡组 / 传说卡组。</p>
+                    <div class="modal-sec">
+                        <div class="modal-sec-title">卡组码（可直接复制发给朋友）</div>
+                        <textarea id="deckCodeText" class="code-box" readonly spellcheck="false"></textarea>
+                    </div>
+                    <footer class="modal-foot">
+                        <button class="btn" id="btnCopyDeckReadable" type="button">📝 复制卡表</button>
+                        <button class="btn btn-gold" id="btnCopyDeckCode" type="button">📋 复制卡组码</button>
+                    </footer>
+                </div>
+            </div>
+
+            <!-- ================= 弹窗 ④：粘贴卡组码导入 ================= -->
+            <div class="modal-mask" id="deckImportModal" hidden>
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deckImportTitle">
+                    <header class="modal-head">
+                        <h3 id="deckImportTitle">📥 粘贴卡组码</h3>
+                        <button class="modal-close" id="btnDeckImportClose" type="button" aria-label="关闭">✕</button>
+                    </header>
+                    <p class="modal-hint">粘贴三行数字（主 / 费用 / 传说），会【新建一份独立卡组】，不会覆盖你现有的卡组 ✓</p>
+                    <div class="modal-sec">
+                        <div class="modal-sec-title">卡组码</div>
+                        <textarea id="deckImportText" class="code-box" spellcheck="false" placeholder="000001000007000013…&#10;…"></textarea>
+                    </div>
+                    <p class="modal-hint" id="deckImportPreview"></p>
+                    <footer class="modal-foot">
+                        <button class="btn" id="btnDeckImportCancel" type="button">取消</button>
+                        <button class="btn btn-success" id="btnDeckImportConfirm" type="button">📥 导入为新卡组</button>
+                    </footer>
+                </div>
+            </div>
+
+            <!-- 战斗视图模板（模板内容不参与渲染与布局，document.getElementById 也查不到） -->
+            <template id="battleViewTemplate">
+                <div class="battle-container">
+
+                    <!-- ================= 中央牌桌（占满可用空间） ================= -->
+                    <div class="battle-table">
+
+                        <!-- 对手半区：左侧一列 = 上方玩家信息块 + 下方费用区 -->
+                        <section class="half opponent-half">
+                            <div class="player-area opponent">
+                                <div class="battle-field-wrapper">
+                                    <div class="left-column">
+                                        <div class="half-info">
+                                            <div class="pc-avatar" title="对手">
+                                                <span class="pc-avatar-face">👤</span>
+                                                <span class="player-health" id="opponent-health" title="对手血量由对方修改">30</span>
+                                            </div>
+                                            <div class="pc-stats">
+                                                <span class="pc-stat" title="对手手牌数（主牌 / 费牌）">🃏 <b id="opponent-hand-main-count">0</b><i>/</i><b id="opponent-hand-cost-count">0</b></span>
+                                            </div>
+                                        </div>
+                                        <div class="cost-zone" id="opponent-cost-zone"></div>
+                                    </div>
+                                    <div class="field-zone-container">
+                                        <div class="field-row back" id="opponent-back-field"></div>
+                                        <div class="field-row front" id="opponent-front-field"></div>
+                                    </div>
+                                    <div class="deck-zone" id="opponent-deck-zone"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 中央分界线（原「公共区」已移除，公开功能后续重做，此处仅保留回合提示） -->
+                        <div class="table-divider" id="tableDivider">
+                            <span class="divider-text" id="dividerText">等待开始</span>
+                        </div>
+
+                        <!-- 自己半区：左侧一列 = 上方玩家信息块 + 下方费用区（与对手半区对称） -->
+                        <section class="half self-half">
+                            <div class="player-area self">
+                                <div class="battle-field-wrapper">
+                                    <div class="left-column">
+                                        <div class="half-info self-info">
+                                            <div class="pc-avatar" title="我">
+                                                <span class="pc-avatar-face">🧑</span>
+                                                <span class="player-health" id="self-health" title="点击修改血量">30</span>
+                                            </div>
+                                            <div class="pc-stats">
+                                                <span class="pc-stat" title="我的手牌数（主牌 / 费牌）">🃏 <b id="self-hand-main-count">0</b><i>/</i><b id="self-hand-cost-count">0</b></span>
+                                            </div>
+                                        </div>
+                                        <div class="cost-zone" id="self-cost-zone"></div>
+                                    </div>
+                                    <div class="field-zone-container">
+                                        <div class="field-row front" id="self-front-field"></div>
+                                        <div class="field-row back" id="self-back-field"></div>
+                                    </div>
+                                    <div class="deck-zone" id="self-deck-zone"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- 手牌 -->
+                        <div class="self-hand" id="self-hand">
+                            <div class="hand-subzone" id="self-hand-cost"></div>
+                            <div class="hand-divider"></div>
+                            <div class="hand-subzone" id="self-hand-main"></div>
+                        </div>
+
+                        <!-- ================= 右下角操作区（图2 风格：悬浮胶囊主按钮） ================= -->
+                        <div class="battle-actions">
+                            <button class="btn end-turn-btn" id="btnEndTurn">结束回合</button>
+                        </div>
+
+                    </div>
+
+                    <!-- ============ 右侧工具栏（工具 + 战报开关；回合数只在中央分界线显示） ============ -->
+                    <aside class="battle-rail">
+                        <div class="side-panel-container" id="sidePanelContainer"></div>
+
+                        <div class="rail-sep"></div>
+
+                        <button class="rail-btn" id="btnToggleLog">战报</button>
+
+                        <div class="rail-sep"></div>
+
+                        <!-- 战报面板：默认隐藏，点「战报」按钮展开；✕ 收起 -->
+                        <div class="battle-log-panel" id="battleLogPanel">
+                            <div class="battle-log-header">
+                                <span>对局战报</span>
+                                <span class="log-actions">
+                                    <button class="log-clear-btn" id="btnClearLog" title="清空战报">清空</button>
+                                    <button class="log-clear-btn" id="btnCloseLog" title="关闭">✕</button>
+                                </span>
+                            </div>
+                            <div class="battle-log-list" id="battleLogList"></div>
+                        </div>
+                    </aside>
+
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- 模块脚本（按依赖顺序加载） -->
+    <!-- 词条文本库（必须最先加载，供其他模块使用） -->
+    <!-- 通用小工具：flipSide / sideLabel / isConnected / deckLabel（见 js/core/util.js） -->
+    <script src="js/core/util.js"></script>
+    <!-- 状态提交唯一入口：通知对方 + 我方重绘（见 js/core/stateCommit.js） -->
+    <script src="js/core/stateCommit.js"></script>
+    <script src="js/core/traitLibrary.js"></script>
+    <!-- 卡牌库中间层（必须在 cards.js 之前加载） -->
+    <script src="js/core/cardLibrary.js"></script>
+    <!-- 多卡组存储（★游戏内必需：多份卡组 + 出战卡组 + 旧 savedDeck 迁移，见 js/core/deckStore.js） -->
+    <script src="js/core/deckStore.js"></script>
+    <!-- 卡组码：6 位身份证号拼接 / 解析（纯逻辑，见 js/core/deckCode.js + 准则规范手册 A14） -->
+    <script src="js/core/deckCode.js"></script>
+    <!-- 内置卡牌注册，并触发卡包加载 -->
+    <script src="js/cards.js"></script>
+
+    <script src="js/deckManager.js"></script>
+    <!-- 联机配置 / 房间号规则 / 联机文案 / ICE·SDP 解析 / 传输层（全是零状态的纯模块 ✓）
+         —— network.js 里的同名函数转发到这里 ✓ 顺序必须在 network.js 之前，否则白屏 ✗ -->
+    <script src="js/net/netConfig.js"></script>
+    <script src="js/net/iceInspect.js"></script>
+    <script src="js/net/roomCode.js"></script>
+    <script src="js/net/netText.js"></script>
+    <script src="js/net/transport.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/core/gameState.js"></script>
+    <!-- 公开状态快照的序列化 / 反序列化（gameState 里的同名函数转发到这里 ✓） -->
+    <script src="js/core/snapshot.js"></script>
+    <script src="js/core/zoneManager.js"></script>
+    <!-- 卡牌查找：全项目唯一实现（cardActions 里的同名函数转发到这里 ✓） -->
+    <script src="js/core/cardQuery.js"></script>
+    <!-- 费用区批量整理：自动对齐 / 调换 / 找空格（见 js/core/costZoneOps.js） -->
+    <script src="js/core/costZoneOps.js"></script>
+    <!-- 对局流程：认输 / 胜负 / 再来一局（纯逻辑，零 DOM ✓） -->
+    <script src="js/core/matchManager.js"></script>
+    <!-- 入场 / 时点副作用：时点广播、入场标记、费用区自动切换（见 js/core/cardEntry.js） -->
+    <script src="js/core/cardEntry.js"></script>
+    <!-- 移动底层：取出 / 落区 / 离场清理 / 手牌计数（见 js/core/cardMover.js） -->
+    <script src="js/core/cardMover.js"></script>
+    <script src="js/core/cardActions.js"></script>
+    <!-- 控制权模型：转移控制权 / 复制卡牌（见 js/core/controlManager.js 顶部概念说明） -->
+    <script src="js/core/controlManager.js"></script>
+    <script src="js/core/cardHandoverChannel.js"></script>
+    <script src="js/core/statManager.js"></script>
+    <script src="js/core/turnManager.js"></script>
+    <script src="js/core/menuAction.js"></script>
+    <script src="js/core/timePointBus.js"></script>
+    <script src="js/core/chainRules.js"></script>
+    <!-- 响应时点「忽略清单」：侧栏「响应」按钮勾选，链管理器据此自动略过（见 js/core/responsePrefs.js） -->
+    <script src="js/core/responsePrefs.js"></script>
+    <script src="js/core/chainTarget.js"></script>
+    <script src="js/core/chainManager.js"></script>
+    <!-- 展示 / 翻阅 / 手牌展示：唯一权威（会话状态 + 联机同步 + 未公开时的信息隐藏） -->
+    <script src="js/core/revealChannel.js"></script>
+    <script src="js/core/syncManager.js"></script>
+    <script src="js/core/mulliganManager.js"></script>
+    <script src="js/core/traitManager.js"></script>
+    <script src="js/ui/cardUI.js"></script>
+    <script src="js/ui/deckBuilderUI.js"></script> 
+    <script src="js/ui/fieldUI.js"></script>
+    <script src="js/ui/costUI.js"></script>
+    <script src="js/ui/healthUI.js"></script>
+    <script src="js/ui/turnUI.js"></script>
+    <script src="js/ui/mulliganUI.js"></script>
+    <script src="js/ui/deckUI.js"></script>
+    <script src="js/ui/cardDetailUI.js"></script>
+    <script src="js/ui/viewerUI.js"></script>
+    <script src="js/ui/uiKit.js"></script>
+    <script src="js/ui/menuUI.js"></script>
+    <!-- 攻防修改弹窗（阶段4 从 core/menuAction.js 外迁 ✓） -->
+    <script src="js/ui/statEditorUI.js"></script>
+    <!-- 选格流程：登场 / 发动 / 支付 / 翻盖 / 转移·复制 的「点格子」（见 js/ui/targetFlowUI.js） -->
+    <script src="js/ui/targetFlowUI.js"></script>
+    <!-- 装备卡离场弹窗：掉落 / 进墓 二选一（由控制方决定，见 js/ui/equipChoiceUI.js） -->
+    <script src="js/ui/equipChoiceUI.js"></script>
+    <script src="js/ui/traitUI.js"></script>
+    <script src="js/ui/contextMenu.js"></script>
+    <script src="js/ui/chainArrows.js"></script>
+    <script src="js/ui/chainPanelUI.js"></script>
+    <script src="js/ui/revealPanelUI.js"></script>
+    <script src="js/ui/deckTakeUI.js"></script>
+    <script src="js/interaction/dragController.js"></script>
+    <script src="js/interaction/handLayout.js"></script>
+    <script src="js/interaction/targetSelector.js"></script>
+    <script src="js/interaction/opponentPileViewer.js"></script>
+    <script src="js/interaction/sidePanel.js"></script>
+    <script src="js/interaction/equipController.js"></script>
+    <script src="js/integration/traitIntegration.js"></script>
+    <script src="js/interaction/counterPopup.js"></script>
+    <!-- 词条 / 自定义文本 编辑面板（右键卡牌 →「词条/文本」） -->
+    <script src="js/ui/traitPanelUI.js"></script>
+    <script src="js/ui/battleLog.js"></script>
+    <!-- 卡组码弹窗（生成 / 复制 / 粘贴导入）—— 卡组管理器侧的功能 ✓ -->
+    <script src="js/ui/deckCodeUI.js"></script>
+    <!-- 「我的卡组」视图（卡组库总览：新建 / 改名 / 出战 / 编辑入口） -->
+    <script src="js/ui/myDecksUI.js"></script>
+    <!-- VS 准备界面的「出战卡组」条（下拉切换 / 编辑 / 卡组码 / 合法性提示） -->
+    <script src="js/ui/vsDeckUI.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/ui/diagUI.js"></script>
+    <script src="js/ui/costPanelUI.js"></script>
+    <!-- 认输确认 / 胜负结果 / 继续对战·离开房间 三个弹窗 -->
+    <script src="js/ui/matchUI.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+/* =====================================================================
+   css/trait-panel.css
+   「词条 / 自定义文本」编辑面板（见 js/ui/traitPanelUI.js）
+   ===================================================================== */
+
+.trait-panel {
+    position: fixed;
+    z-index: 6450;              /* 压过对方展示窗 6350；低于选牌 6500 / 数量弹窗 6600 ✓ */
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    width: 258px;
+    max-width: 92vw;
+    padding: 10px 12px 12px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(24, 33, 52, 0.985) 0%, rgba(13, 20, 33, 0.995) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    color: var(--text-primary);
+    animation: tpIn 0.12s ease-out;
+}
+
+@keyframes tpIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+.tp-head { display: flex; align-items: center; gap: 8px; }
+
+.tp-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-gold);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tp-close {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.tp-close:hover { color: #fff; border-color: var(--accent); }
+
+.tp-sub { font-size: 0.68rem; line-height: 1.35; color: var(--text-secondary); }
+
+/* 小节标题（词条 / 添加 ✓） */
+.tp-sec {
+    margin-top: 2px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+}
+
+/* 词条标签（来自词条库）：点一下加、再点一下移 ✓ */
+.tp-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 116px;
+    overflow-y: auto;
+}
+
+.tp-trait {
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, filter 0.1s;
+}
+
+.tp-trait:hover { transform: translateY(-1px); border-color: var(--accent); }
+
+/* 已挂上的词条：高亮 ✓（卡面也会出现同名标签 ✓） */
+.tp-trait.on {
+    background: rgba(255, 215, 106, 0.18);
+    border-color: var(--text-gold);
+    color: var(--text-gold);
+}
+/* ---------- 添加输入行 ---------- */
+.tp-custom { display: flex; gap: 6px; }
+
+.tp-input {
+    flex: 1;
+    min-width: 0;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0f1a2b;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.74rem;
+}
+
+.tp-input:focus { outline: none; border-color: var(--accent); }
+
+/* ---------- 已添加的自定义文本列表 ---------- */
+.tp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 116px;
+    overflow-y: auto;
+}
+
+.tp-row { display: flex; align-items: center; gap: 5px; }
+
+.tp-text {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.7rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tp-btn {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 22px;
+    cursor: pointer;
+    border-radius: 7px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.tp-del:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+.tp-empty { padding: 6px 2px; font-size: 0.7rem; color: var(--text-secondary); }
+
+/* ---------- 底部 ---------- */
+.tp-foot { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
+
+.tp-foot-btn {
+    padding: 4px 10px;
+    cursor: pointer;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.tp-foot-btn:hover { border-color: var(--accent); }
+.tp-foot-btn.primary { background: rgba(76, 175, 80, 0.22); border-color: rgba(76, 175, 80, 0.6); }
+.tp-foot-btn.danger { background: rgba(233, 69, 96, 0.18); border-color: rgba(233, 69, 96, 0.55); }
+
+@media (prefers-reduced-motion: reduce) {
+    .trait-panel { animation: none; }
+    .tp-trait:hover { transform: none; }
+}

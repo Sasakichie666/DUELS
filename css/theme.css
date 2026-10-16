@@ -1,0 +1,340 @@
+/* css/theme.css
+   ★阶段T1（全站 UI 统一）：把「对局大厅」那套风格推广到整个页面 ——
+     深色低对比 · 描边卡片 · 金色主按钮 · 小标题 · 圆角 · 留白
+   ★为什么单独一个文件：
+     · 只做覆盖，不改任何老的 css 文件 ✓ → 想回滚：删掉 index.html 里这一行 link 即可 ✓
+     · 载入顺序放在最后 → 稳定覆盖 base / deck / battle 等老样式 ✓
+   ★阶段T1c（按用户给的参考图【只定色】✓）：参考图的样子 =
+     青蓝底 + 青蓝卡片 + 「黄底黑字」的主要按钮 ✓
+     · 主题色 = 青蓝 #38c6d8（--ui-accent ✓ 聚焦 / 描边 / 高亮都走它 ✓ 亮而不闷 ✓）
+     · 重要按钮 = 黄底黑字 #f2c94c / #1a1400（★与 css/lobby.css 的 --lobby-gold 完全同值 ✓
+       两处若不一致 → 大厅与全站会变成两种颜色 ✗ 守：97-theme.js 有断言 ✓）
+     · 底色 = 深青蓝（#0a1317 系）· 面板 = 青蓝灰（#142129 系）· 输入底 = 更深一档 ✓
+     · ★只改【颜色】：布局 / 尺寸 / 结构一个字没动 ✓
+   ★不动的地方（刻意保留）：
+     · 卡面本身 / 牌桌区域配色（--color-* --rarity-* 等）保持原样 ✓
+     · 大厅 / VS 场景 / 弹窗的细节样式仍在 css/lobby.css 里（这套变量与它一致 ✓）
+*/
+
+:root {
+    /* ★两套颜色分工（★阶段T1c 按用户给的参考图定色 ✓）：
+       ① 主题色 = 青蓝 --ui-accent：面板 / 描边 / 聚焦 / 高亮 —— "活跃"的来源 ✓
+       ② 重要按钮 = 黄底黑字 --ui-primary + --ui-gold-ink：创建房间 / 保存 / 开始对战 ✓ */
+    --ui-accent: #38c6d8;     /* ★主题青蓝（聚焦环 / 描边 / 高亮 ✓ 亮而不闷 ✓） */
+    --ui-accent-hi: #55d3e2;  /* 青蓝 hover ✓ */
+
+    /* 重要按钮（黄底黑字）：--ui-primary 与 --ui-gold 是同一个值的两个名字 ✓ 要改一起改 ✗ */
+    --ui-primary: #f2c94c;    /* 重要按钮底色（黄 ✓ ★与 lobby.css 同值 ✓） */
+    --ui-primary-hi: #ffd964; /* hover（更亮一档的黄 ✓） */
+    --ui-ink: #1a1400;        /* 黄底上的文字（黑 —— 参考图就是黄底黑字 ✓） */
+
+    --ui-bg: #0a1317;         /* 页面底色（深青蓝 ✓） */
+    --ui-bar: #0e1a1f;        /* 顶栏（比底色略提一档 ✓） */
+    --ui-panel: #142129;      /* 面板卡片底（青蓝灰 ✓） */
+    --ui-panel-2: #1a2a33;    /* 次级面板 / 控件底 ✓ */
+    --ui-input: #101c22;      /* 输入框底色（比面板更深一档 ✓） */
+    --ui-line: #1e3039;       /* 分隔线 ✓ */
+    --ui-line-2: #28424d;     /* 控件描边 ✓ */
+    --ui-muted: #7d99a5;      /* 次要文字 ✓ */
+    --ui-muted-2: #a9c1cb;    /* 次主要文字 ✓ */
+    --ui-radius: 9px;
+
+    /* 兼容别名（css/lobby.css 用的是 --lobby-gold* 这套名字 ✓）
+       ★必须与上面【同值】—— 否则「大厅」与「全站」会变成两种颜色 ✗
+         守：其他/tests/cases/97-theme.js 有一条断言专盯这个 ✓ */
+    --ui-gold: #f2c94c;
+    --ui-gold-hi: #ffd964;
+    --ui-gold-ink: #1a1400;
+    --lobby-panel: #142129;
+    --lobby-line: #1e3039;
+    --lobby-line-soft: #28424d;
+    --lobby-muted: #7d99a5;
+    --lobby-muted-2: #a9c1cb;
+    --lobby-gold: #f2c94c;
+    --lobby-gold-hi: #ffd964;
+    --lobby-gold-ink: #1a1400;
+}
+
+/* ============================================================
+   ① 顶栏（导航）
+   ============================================================ */
+#app { background: var(--ui-bg); }
+.top-nav {
+    padding: 12px 20px;
+    background: var(--ui-bar);
+    border-bottom: 1px solid var(--ui-line);
+    gap: 10px;
+}
+.top-nav .logo {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-shadow: none;
+}
+.top-nav .logo span { color: var(--ui-accent); }
+
+/* 回合数：★只在开局后显示（修 bug：开局前不渲染 ✓ —— markGameStarted 会给 body 加 .game-started ✓） */
+.nav-turn-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    color: var(--ui-muted-2);
+    background: #16242c;
+    border: 1px solid var(--ui-line);
+}
+.nav-turn-count:empty { display: none; }                    /* 没内容就不占位 ✓ */
+body:not(.game-started) .nav-turn-count { display: none; }   /* 开局前彻底隐藏 ✓ */
+
+/* 导航按钮：幽灵描边；当前页 = 金色 ✓ */
+.nav-buttons { gap: 8px; }
+.nav-buttons .btn {
+    padding: 8px 16px;
+    font-size: 0.86rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: transparent;
+    border: 1px solid var(--ui-line-2);
+    border-radius: var(--ui-radius);
+    color: var(--ui-muted-2);
+}
+.nav-buttons .btn:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: #2d4a56;
+    color: var(--text-primary);
+    transform: none;
+    box-shadow: none;
+}
+.nav-buttons .btn.active {
+    background: var(--ui-gold);
+    border-color: var(--ui-gold);
+    color: var(--ui-gold-ink);
+    font-weight: 700;
+    box-shadow: none;
+}
+
+/* ============================================================
+   ② 按钮（全站统一）
+   ============================================================ */
+.btn {
+    padding: 9px 18px;
+    border-radius: var(--ui-radius);
+    background: var(--ui-panel-2);
+    border: 1px solid var(--ui-line-2);
+    color: var(--text-primary);
+    font-weight: 500;
+    transition: background 0.18s, border-color 0.18s, color 0.18s;
+}
+.btn:hover {
+    background: #17262d;
+    border-color: #2f4d5a;
+    transform: none;
+    box-shadow: none;
+}
+.btn.active { background: var(--ui-gold); border-color: var(--ui-gold); color: var(--ui-gold-ink); }
+.btn:disabled { opacity: 0.45; }
+
+/* 主按钮 = 黄底黑字（全站统一 ✓：创建房间 / 保存卡组 / 准备 / 开始对战 …） */
+.btn-success {
+    background: var(--ui-gold);
+    border-color: var(--ui-gold);
+    color: var(--ui-gold-ink);
+    font-weight: 700;
+}
+.btn-success:hover { background: var(--ui-gold-hi); border-color: var(--ui-gold-hi); box-shadow: none; }
+
+/* 危险按钮：低调红描边（不再抢眼 ✓） */
+.btn-danger {
+    background: rgba(214, 92, 92, 0.12);
+    border-color: rgba(214, 92, 92, 0.5);
+    color: #e88b8b;
+    font-weight: 500;
+}
+.btn-danger:hover { background: rgba(214, 92, 92, 0.2); border-color: #e88b8b; box-shadow: none; }
+
+/* 结束回合：我的回合 = 黄底黑字；对方回合 = 禁用态（沿用 JS 加的 .is-active-turn ✓） */
+#btnEndTurn { font-weight: 700; border-radius: var(--ui-radius); }
+#btnEndTurn.is-active-turn:not(:disabled) {
+    background: var(--ui-gold);
+    border-color: var(--ui-gold);
+    color: var(--ui-gold-ink);
+}
+
+/* ============================================================
+   ③ 面板 / 容器（全站统一容器语言）
+   ============================================================ */
+.card-library,
+.deck-editor {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-line);
+    border-radius: 12px;
+    padding: 18px;
+}
+.lobby-panel {
+    background: var(--ui-panel);
+    border: 1px solid var(--ui-line);
+    border-radius: 12px;
+}
+.deck-editor h3,
+.card-library h3,
+.lobby-panel h2 {
+    color: var(--text-primary);
+    letter-spacing: 2px;
+}
+.deck-editor h3 {
+    font-size: 1.05rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--ui-line);
+}
+.deck-editor .deck-count {
+    color: var(--ui-muted);
+    font-size: 0.78rem;
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+/* 小标题（槽位分区 / 筛选区 / 卡包） */
+.slot-section h4,
+.library-filters h4,
+.library-filter-summary,
+.card-library h4 {
+    color: var(--ui-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+/* 卡组槽位 / 牌库区：内嵌深色块 ✓ */
+.deck-slots,
+.slot-section {
+    background: var(--ui-input);
+    border: 1px solid var(--ui-line);
+    border-radius: 10px;
+}
+.slot-section { padding: 10px 12px; }
+.deck-slots { background: transparent; border: 0; }
+
+/* 底部动作区：留白 + 分隔 ✓ */
+.deck-actions {
+    padding-top: 12px;
+    border-top: 1px solid var(--ui-line);
+    gap: 10px;
+}
+
+/* 筛选区：卡包等普通小按钮 → 低调描边 ✓
+   ★★重要：不要给 .color-pick 设 background ✗
+     那些圆点的"颜色"就是靠 background 显示的（.color-pick.red 等 ✓）
+     一旦覆盖成灰底 → 颜色筛选就全变灰了 ✗（本次修的就是这个 ✗）
+     所以这里对 .color-pick【只动边框】✓，激活类名是 .on（不是 .is-active ✓） */
+.library-filters button:not(.btn) {
+    background: var(--ui-panel-2);
+    border: 1px solid var(--ui-line-2);
+    border-radius: 8px;
+    color: var(--ui-muted-2);
+}
+.library-filters button:not(.btn):hover { border-color: var(--ui-accent); color: var(--text-primary); }
+.library-filters button:not(.btn).is-active {
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
+}
+.library-filters .color-pick {
+    /* ★这里一个字都不能设 background / background-color ✗
+       （设了就会盖掉 .color-pick.red 等 → 颜色点全变灰 ✗ 这次就是踩了这个坑 ✓） */
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.library-filters .color-pick.on { border-color: #fff; }
+
+/* ============================================================
+   ④ 输入框 / 下拉 / 文本域（全站统一：深底 + 青蓝聚焦 ✓）
+   ============================================================ */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+select,
+textarea {
+    background: var(--ui-input);
+    border: 1px solid var(--ui-line-2);
+    border-radius: var(--ui-radius);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--ui-accent);
+    box-shadow: 0 0 0 2px rgba(47, 212, 230, 0.14);
+}
+input::placeholder,
+textarea::placeholder { color: var(--ui-muted); }
+
+/* ============================================================
+   ⑤ 滚动条 / 留白
+   ============================================================ */
+* { scrollbar-width: thin; scrollbar-color: #1d3138 transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: #16262d;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #223d47; background-clip: content-box; }
+
+.main-content { padding: 18px 20px; gap: 14px; }
+.view { gap: 14px; }
+
+/* ============================================================
+   ⑥ 深蓝灰统一（按参考图：近黑偏蓝底 + 深蓝灰面板 ✓）
+   ============================================================ */
+/* 页面最外层（#app 之外那圈底）：压到近黑偏蓝 —— 参考图整幅就是深蓝灰底 ✓
+   （base.css 里原来带一点偏紫的光 ✗ 这里统一成偏蓝的一层 ✓） */
+body {
+    background-color: var(--ui-bg);
+    background-image:
+        radial-gradient(ellipse 120% 80% at 50% 0%, rgba(47, 212, 230, 0.055) 0%, rgba(0, 0, 0, 0) 55%),
+        radial-gradient(ellipse 120% 90% at 50% 100%, rgba(30, 120, 150, 0.05) 0%, rgba(0, 0, 0, 0) 60%),
+        linear-gradient(180deg, #0b161b 0%, #060d10 100%);
+}
+/* 输入类控件：统一成 --ui-input（参考图：输入底比面板更深一档 ✓） */
+input[type="text"], input[type="number"], input[type="search"], select, textarea,
+.lobby-select, .vs-room, .vs-status .connection-status, .match-config,
+.deck-slots, .slot-section, .opt, .modal .password-input-group input {
+    background-color: var(--ui-input);
+}
+
+
+
+/* ============================================================
+   ⑦ ★例外：自带「胶囊外壳」的搜索框（检索 / 翻阅 / 查阅 三个界面 ✓）
+   外壳 .pv-search 自己已经画了底 + 描边 + 圆角（见 css/viewer.css ✓）
+   而第 ④ 节把【所有】 input[type="text"] 都加上了底与描边（权重相同、但它更靠后 ✗）
+   → 内层 input 会再画一个框 ⇒ 看起来就是「两个搜索框叠在一起」✗
+   这里让外壳内的 input 回到「无框透底」✓（聚焦效果仍由 .pv-search:focus-within 提供 ✓）
+   ============================================================ */
+.pv-search input {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+/* ★连 :hover / :focus / :focus-visible 一起钉死 ✗
+   （第 ④ 节的 input:focus 权重是 (0,2,1)，比 .pv-search input (0,1,1) 高 →
+     不写这几条的话，鼠标一点进去又会冒出一个青框 ✗ 用户看到的"多一个青框"就是它 ✓）
+   聚焦效果只由外壳 .pv-search:focus-within 提供 ✓ */
+.pv-search input:hover,
+.pv-search input:focus,
+.pv-search input:focus-visible {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+

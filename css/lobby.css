@@ -1,0 +1,596 @@
+/* css/lobby.css */
+/* 联机大厅样式 */
+.lobby-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    flex: 1;
+    align-items: start;
+}
+@media (max-width: 800px) {
+    .lobby-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.lobby-panel {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.lobby-panel h2 {
+    color: var(--text-gold);
+    font-size: 1.3rem;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.lobby-panel h2 .icon {
+    font-size: 1.5rem;
+}
+
+/* 创建房间标题内嵌密码：与标题文字大小一致，带背景框 */
+.room-code-inline {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 12px;
+    font-size: 1.3rem;
+    vertical-align: middle;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+.room-code-inline .room-code-label {
+    margin-right: 8px;
+    color: var(--text-secondary);
+    font-size: inherit;
+}
+.room-code-small {
+    font-size: inherit;
+    font-weight: 700;
+    color: var(--text-gold);
+    letter-spacing: 2px;
+}
+
+/* 加入房间密码输入组 */
+.password-input-group {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.password-input-group input {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    letter-spacing: 8px;
+    text-align: center;
+    font-weight: 700;
+    transition: border-color 0.3s;
+    outline: none;
+}
+.password-input-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(233, 69, 96, 0.3);
+}
+.password-input-group input::placeholder {
+    letter-spacing: 2px;
+    font-weight: 400;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+}
+.connection-status .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--warning);
+    transition: background 0.3s;
+}
+.connection-status .dot.connected {
+    background: var(--success);
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+}
+.connection-status .dot.disconnected {
+    background: var(--error);
+}
+.connection-status .dot.connecting {
+    background: var(--warning);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.opponent-info {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.95rem;
+}
+.opponent-info .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    border: 2px solid var(--border);
+}
+
+/* 对战等待界面（准备阶段） */
+.battle-waiting {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex: 1;
+    padding: 40px;
+    text-align: center;
+}
+.battle-waiting.active {
+    display: flex;
+}
+.battle-waiting .player-cards {
+    display: flex;
+    gap: 40px;
+    align-items: center;
+}
+/* 玩家卡片之间的VS图标，带闪烁动画 */
+.vs-icon-inline {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+    margin: 0 12px;
+    animation: pulse 1.5s infinite;
+}
+.battle-waiting .player-card {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 160px;
+}
+.battle-waiting .player-card .p-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+.battle-waiting .player-card .p-status {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.battle-waiting .player-card .p-status.ready {
+    color: var(--success);
+}
+
+/* ============================================================
+   ★联机大厅改版（阶段L1 结构 + 阶段L2 风格细化）
+   风格参考（用户给的图）：深色低对比 · 序号小标题 · 金色主按钮 ·
+                          下拉选择 · 圆角 · 留白充足 · 空态提示卡
+   说明：只作用于大厅 / VS 场景 / 弹窗，不动牌桌与其它视图 ✓
+   ============================================================ */
+:root {
+    --lobby-panel: #142129;      /* 面板底色（深蓝灰 = 参考图 ✓） */
+    --lobby-line: #1e3039;       /* 分隔线 */
+    --lobby-line-soft: #28424d;  /* 控件描边 */
+    --lobby-muted: #7d99a5;      /* 次要文字 */
+    --lobby-muted-2: #a9c1cb;    /* 次主要文字 */
+    --lobby-gold: #f2c94c;       /* 主按钮（黄底黑字，参考图 ✓ ★必须与 theme.css 同值 ✓） */
+    --lobby-gold-hi: #ffd964;    /* 主按钮 hover ✓ */
+    --lobby-gold-ink: #1a1400;   /* 蓝按钮上的深色字 ✓ */
+}
+
+/* ---------- 大厅：整块做成卡片（与参考图一致 ✓） ---------- */
+.lobby-hero {
+    width: min(520px, 96vw);
+    margin: 8px auto 0;
+    padding: 26px 24px 22px;
+    background: var(--lobby-panel);
+    border: 1px solid var(--lobby-line);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+.lobby-step {
+    font-size: 0.76rem;
+    letter-spacing: 1.5px;
+    color: var(--lobby-muted);
+}
+.lobby-title {
+    margin: -8px 0 0;
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text-primary);
+}
+.lobby-field { display: flex; flex-direction: column; gap: 8px; }
+.lobby-label {
+    font-size: 0.8rem;
+    color: var(--lobby-muted);
+    letter-spacing: 0.5px;
+}
+.select-wrap { position: relative; }
+.lobby-select {
+    width: 100%;
+    padding: 12px 40px 12px 14px;
+    background: #101c22;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.lobby-select:hover { border-color: #2f4d5a; }
+.lobby-select:focus { border-color: var(--ui-accent); box-shadow: 0 0 0 2px rgba(47, 212, 230, 0.13); }
+.lobby-select option { background: #101c22; color: var(--text-primary); }
+.select-caret {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--lobby-muted);
+    pointer-events: none;
+    font-size: 0.8rem;
+}
+.lobby-hint { font-size: 0.75rem; color: var(--lobby-muted); line-height: 1.6; }
+
+/* ---------- 两个入口按钮：仍然【并列排】✓（主按钮金色 = 参考图风格 ✓） ---------- */
+.lobby-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+@media (max-width: 520px) {
+    .lobby-actions { grid-template-columns: 1fr; }
+}
+.action-tile {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 16px;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 10px;
+    background: #1a2a33;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.18s, border-color 0.18s, transform 0.12s;
+}
+.action-tile:hover:not(:disabled) { transform: translateY(-1px); border-color: #2f4d5a; }
+.action-tile:disabled { opacity: 0.5; cursor: not-allowed; }
+.action-tile .at-arrow { font-size: 1.1rem; opacity: 0.75; }
+.action-tile .at-sub { font-size: 0.72rem; font-weight: 400; color: var(--lobby-muted); letter-spacing: 0; }
+/* 主按钮：金色填充 + 深色字（与参考图一致 ✓） */
+.action-create {
+    background: var(--lobby-gold);
+    border-color: var(--lobby-gold);
+    color: var(--lobby-gold-ink);
+}
+.action-create:hover:not(:disabled) { background: var(--lobby-gold-hi); border-color: var(--lobby-gold-hi); }
+.action-join { justify-content: center; }
+
+/* ---------- 分区标题行（参考图"可用房间 / 刷新"那一行 ✓） ---------- */
+.lobby-row-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: var(--lobby-muted);
+}
+.btn-ghost {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 8px;
+    color: var(--lobby-muted-2);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.18s, color 0.18s, background 0.18s;
+}
+.btn-ghost:hover { border-color: #2f4d5a; color: var(--text-primary); background: rgba(255, 255, 255, 0.03); }
+
+/* ---------- 空态提示卡（参考图 ◇ 空态 ✓ 内容如实 ✓） ---------- */
+.lobby-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px 10px 14px;
+    text-align: center;
+}
+.lobby-empty .le-icon { font-size: 1.4rem; color: var(--lobby-line-soft); line-height: 1; }
+.lobby-empty .le-main { font-size: 0.84rem; color: var(--lobby-muted-2); }
+.lobby-empty .le-sub { font-size: 0.74rem; color: var(--lobby-muted); }
+/* 老诊断条：并入新风格（保留原类名，其它地方不受影响 ✓） */
+.diag-bar { margin: 0; padding: 0; border: 0; background: transparent; }
+
+/* ============================================================
+   VS 准备场景（与大厅同一套语言 ✓）
+   ============================================================ */
+.vs-scene {
+    width: min(760px, 96vw);
+    margin: 8px auto 0;
+    padding: 22px 24px 20px;
+    background: var(--lobby-panel);
+    border: 1px solid var(--lobby-line);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.vs-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vs-step { font-size: 0.76rem; letter-spacing: 1.5px; color: var(--lobby-muted); }
+.vs-title {
+    margin: -6px 0 0;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text-primary);
+}
+
+/* 房间号（大号金色 + 复制 ✓） */
+.vs-room {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-start;
+    padding: 10px 14px;
+    background: #101c22;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 10px;
+}
+.vs-room .vs-room-label { font-size: 0.8rem; color: var(--lobby-muted); }
+.vs-room .room-code-small {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--lobby-gold);
+}
+.btn-mini { padding: 5px 12px; font-size: 0.78rem; }
+
+/* 连接状态两行 */
+.vs-status { display: flex; gap: 10px; flex-wrap: wrap; }
+.vs-status .connection-status {
+    flex: 1 1 240px;
+    background: #101c22;
+    border: 1px solid var(--lobby-line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+}
+
+/* 赛制 / 局数 一行（muted 标签 + 金色值 ✓） */
+.match-config {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: #101c22;
+    border: 1px solid var(--lobby-line);
+    border-radius: 8px;
+    font-size: 0.84rem;
+}
+.match-config .mc-item { color: var(--lobby-muted); }
+.match-config .mc-item b { color: var(--lobby-gold); font-size: 1rem; margin-left: 4px; font-weight: 700; }
+.match-config .mc-hint { margin-left: auto; font-size: 0.74rem; color: var(--lobby-muted); }
+
+/* 准备区（保留原结构与类名 ✓ 只调间距与配色） */
+#view-vs .battle-waiting { padding: 6px 0 0; gap: 18px; }
+#view-vs .battle-waiting .player-card {
+    background: #101c22;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 10px;
+    padding: 16px 18px;
+}
+#view-vs .battle-waiting .player-card .p-name { font-size: 1rem; }
+#view-vs .battle-waiting .player-card .p-status { font-size: 0.8rem; color: var(--lobby-muted); }
+#view-vs .battle-waiting .player-card .p-status.ready { color: var(--success); }
+#view-vs .battle-waiting .opponent-info {
+    background: #101c22;
+    border: 1px solid var(--lobby-line);
+    border-radius: 8px;
+}
+#view-vs .vs-icon-inline {
+    color: var(--lobby-gold);
+    text-shadow: 0 0 18px rgba(47, 212, 230, 0.35);
+}
+
+/* 主 CTA：开始对战（金色 ✓） */
+#btnStartGame {
+    background: var(--lobby-gold);
+    border: 1px solid var(--lobby-gold);
+    color: var(--lobby-gold-ink);
+    font-weight: 700;
+    border-radius: 10px;
+}
+#btnStartGame:hover:not(:disabled) { background: var(--lobby-gold-hi); border-color: var(--lobby-gold-hi); }
+#btnStartGame:disabled {
+    background: #1a2a33;
+    border-color: var(--lobby-line-soft);
+    color: var(--lobby-muted);
+}
+#view-vs #startGameHint { font-size: 0.78rem; color: var(--lobby-muted); }
+
+/* 「准备」：次主按钮（描边，不抢金色 CTA ✓） */
+#btnReady {
+    background: #1a2a33;
+    border: 1px solid var(--lobby-line-soft);
+    color: var(--text-primary);
+    border-radius: 8px;
+    font-size: 0.88rem;
+}
+#btnReady:hover { border-color: var(--lobby-gold); color: var(--lobby-gold); }
+
+/* ============================================================
+   弹窗（创建房间 / 加入房间）—— 与大厅同一套语言 ✓
+   ============================================================ */
+.modal-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 7000;                        /* 高于展示面板 6350 / 手牌挑选 6500 ✓ */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(6, 8, 12, 0.72);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+}
+.modal-mask[hidden] { display: none; }    /* ★用 hidden 控制显隐（不动 .view 那套 ✓） */
+
+.modal {
+    width: min(560px, 96vw);
+    max-height: 88vh;
+    overflow-y: auto;
+    padding: 20px 22px 18px;
+    background: var(--lobby-panel);
+    border: 1px solid var(--lobby-line);
+    border-radius: 12px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.7);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.modal.modal-sm { width: min(440px, 96vw); }
+
+.modal-head { display: flex; align-items: center; gap: 10px; }
+.modal-head h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+}
+.modal-close {
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--lobby-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+.modal-close:hover { border-color: #2f4d5a; color: var(--text-primary); }
+.modal-hint { margin: 0; font-size: 0.78rem; color: var(--lobby-muted); line-height: 1.7; }
+.modal-sec { display: flex; flex-direction: column; gap: 8px; }
+.modal-sec-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--lobby-muted);
+    letter-spacing: 1px;
+    padding-left: 8px;
+    border-left: 3px solid var(--lobby-gold);
+}
+
+/* 选项行：赛制三选一 / 局数三选一（并列 ✓） */
+.opt-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 520px) {
+    .opt-row { grid-template-columns: 1fr; }
+}
+.opt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-height: 72px;
+    padding: 10px 8px;
+    background: #101c22;
+    border: 1px solid var(--lobby-line-soft);
+    border-radius: 10px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s;
+}
+.opt:hover { border-color: #2f4d5a; }
+.opt b { font-size: 0.95rem; font-weight: 600; letter-spacing: 1px; }
+.opt span { font-size: 0.68rem; color: var(--lobby-muted); text-align: center; line-height: 1.4; }
+.opt.is-active {
+    border-color: var(--lobby-gold);
+    background: rgba(47, 212, 230, 0.12);
+}
+.opt.is-active b { color: var(--lobby-gold); }
+
+.modal-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2px; }
+.modal-foot .btn { min-width: 110px; border-radius: 10px; }
+.modal-foot .btn-success {
+    background: var(--lobby-gold);
+    border-color: var(--lobby-gold);
+    color: var(--lobby-gold-ink);
+    font-weight: 700;
+}
+.modal-foot .btn-success:hover { background: var(--lobby-gold-hi); border-color: var(--lobby-gold-hi); }
+/* 弹窗里的房间号输入：沿用原样式，只按新配色收一下 ✓ */
+.modal .password-input-group input {
+    background: #101c22;
+    border: 1px solid var(--lobby-line-soft);
+    letter-spacing: 4px;
+}
+.modal .password-input-group input:focus {
+    border-color: var(--lobby-gold);
+    box-shadow: 0 0 0 2px rgba(47, 212, 230, 0.13);
+}
+
+
+
